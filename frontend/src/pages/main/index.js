@@ -24,7 +24,9 @@ const HomePage = ({ updateOrders }) => {
   const getRecipes = ({ page = 1, tags }) => {
     api
       .getRecipes({ page, tags })
-      .then(res => {
+      .then(res =>
+      {
+        console.log(res)
         const { results, count } = res
         setRecipes(results)
         setRecipesCount(count)
