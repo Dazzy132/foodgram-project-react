@@ -1,4 +1,5 @@
 import csv
+import os
 
 from django.conf import settings
 from django.core.management import BaseCommand
@@ -15,7 +16,10 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         for model, csv_files in TABLES.items():
             with open(
-                f'{settings.BASE_DIR}/static/data/{csv_files}',
+                # f'{settings.BASE_DIR}/static/data/{csv_files}',
+                os.path.abspath(
+                    os.path.join(settings.BASE_DIR, f"../../data/{csv_files}")
+                ),
                 'r',
                 encoding='utf-8'
             ) as csv_file:
