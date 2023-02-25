@@ -9,6 +9,7 @@ from . import models
 @admin.register(models.Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
     list_display = ['id', 'name', 'measurement_unit']
+    search_fields = ['name']
 
 
 class IngredientsInlineAdmin(admin.TabularInline):
@@ -19,9 +20,12 @@ class IngredientsInlineAdmin(admin.TabularInline):
 @admin.register(models.Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = ['id', 'author', 'name', 'text', 'cooking_time',
-                    'get_image', 'get_tags', 'get_ingredients']
-    fields = ('name', 'image', 'get_image', 'text', 'tags')
+                    'get_image', 'get_tags', 'get_ingredients', 'get_favorites_count']
+    fields = ('author', 'name', 'image', 'get_image', 'text', 'cooking_time',
+              'tags')
     readonly_fields = ['get_image']
+    list_filter = ['author', 'tags']
+    search_fields = ['author__username', 'name']
     inlines = [
         IngredientsInlineAdmin
     ]
@@ -32,8 +36,19 @@ class RecipeAdmin(admin.ModelAdmin):
     def get_tags(self, obj):
         return "\n".join([tag.name for tag in obj.tags.all()])
 
+    def get_favorites_count(self, obj):
+        cnt = models.FavoriteRecipe.objects.filter(
+            recipe=obj
+        ).count()
+        return cnt
+
     def get_ingredients(self, obj):
         return "\n".join([ingredient.name for ingredient in obj.ingredients.all()])
+
+    get_image.short_description = 'Фотография рецепта'
+    get_tags.short_description = 'Теги рецепта'
+    get_favorites_count.short_description = 'Количество добавлений в избранное'
+    get_ingredients.short_description = 'Ингредиенты'
 
 
 @admin.register(models.Tag)

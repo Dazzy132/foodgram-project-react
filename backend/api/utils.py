@@ -1,18 +1,8 @@
 import django_filters
-from rest_framework import mixins, viewsets
-from app.models import Ingredient
 
+from rest_framework.pagination import PageNumberPagination
 
-# class TitleFilter(django_filters.FilterSet):
-#     genre = django_filters.CharFilter(field_name='genre__slug')
-#     category = django_filters.CharFilter(field_name='category__slug')
-#
-#     name = django_filters.CharFilter(field_name='name', lookup_expr='contains')
-#     year = django_filters.NumberFilter(field_name='year')
-#
-#     class Meta:
-#         model = Title
-#         fields = ('genre', 'category', 'name', 'year')
+from app.models import Ingredient, Recipe, Tag
 
 
 class IngredientsFilter(django_filters.FilterSet):
@@ -21,3 +11,20 @@ class IngredientsFilter(django_filters.FilterSet):
     class Meta:
         model = Ingredient
         fields = ('name',)
+
+
+class RecipeFilter(django_filters.FilterSet):
+    author = django_filters.CharFilter(field_name='author_id')
+    tags = django_filters.ModelMultipleChoiceFilter(
+        field_name='tags__slug',
+        to_field_name='slug',
+        queryset=Tag.objects.all(),
+    )
+
+    class Meta:
+        model = Recipe
+        fields = ['tags', 'author']
+
+
+class CustomPageNumberPagination(PageNumberPagination):
+    page_size_query_param = 'limit'

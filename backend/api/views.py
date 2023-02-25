@@ -1,25 +1,27 @@
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
-from rest_framework import status, viewsets, filters
+from reportlab.pdfbase import pdfmetrics, ttfonts
+from reportlab.pdfgen import canvas
+from rest_framework import status, viewsets
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated, \
-    IsAuthenticatedOrReadOnly
+from rest_framework.permissions import (IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from app.models import Ingredient, Recipe, RecipeIngredient, Tag
 from users.models import Follow, User
 
-from .serializers import (
-    CustomUserProfileSerializer, CustomUserSerializer,FavoriteRecipeSerializer,
-    FollowSerializer, FollowUserSerializer, IngredientsSerializer,
-    RecipeGETSerializer, RecipeIngredientSerializer, RecipePOSTSerializer,
-    TagSerializer, UserProductListSerializer, CustomObtainTokenSerializer
-)
-
-from .utils import IngredientsFilter
+from .serializers import (CustomObtainTokenSerializer, CustomUserSerializer,
+                          FavoriteRecipeSerializer, FollowSerializer,
+                          FollowUserSerializer, IngredientsSerializer,
+                          RecipeGETSerializer, RecipeIngredientSerializer,
+                          RecipePOSTSerializer, TagSerializer,
+                          UserProductListSerializer)
+from .utils import CustomPageNumberPagination, IngredientsFilter, RecipeFilter
 
 
 class RecipesView(viewsets.ModelViewSet):
@@ -27,6 +29,29 @@ class RecipesView(viewsets.ModelViewSet):
     model = Recipe
     queryset = Recipe.objects.select_related('author')
     serializer_class = RecipeGETSerializer
+    pagination_class = CustomPageNumberPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = RecipeFilter
+
+    def get_queryset(self):
+        is_favorited = self.request.query_params.get(
+            'is_favorited'
+        )
+        is_in_shopping_cart = self.request.query_params.get(
+            'is_in_shopping_cart'
+        )
+
+        if self.request.user.is_authenticated:
+            if is_favorited == '1':
+                return Recipe.objects.filter(
+                    favorites__user=self.request.user
+                )
+            if is_in_shopping_cart == '1':
+                return Recipe.objects.filter(
+                    products__user=self.request.user
+                )
+
+        return Recipe.objects.all()
 
     @action(
         detail=False, methods=['POST', 'DELETE'],
@@ -42,44 +67,60 @@ class RecipesView(viewsets.ModelViewSet):
                 return Response(serializer.data)
             return Response(serializer.errors)
 
-        # Todo: Изменить тут логику, ибо при повторной отправке будет ошибка
         recipe = recipe.favorites.get(user=self.request.user)
         recipe.delete()
         return Response({'Message': "Рецепт успешно убран из избранных"})
 
-    @action(
-        detail=False, methods=['GET'], url_path='download_shopping_cart'
-    )
+    @action(detail=False, permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
-        user = get_object_or_404(User, username=self.request.user.username)
-        all_products = user.products.select_related('recipe')
+        response = HttpResponse(content_type="application/pdf")
+        response["Content-Disposition"] = ("attachment; "
+                                           "filename=shopping_cart.pdf")
 
-        # TODO: ПЕРЕДЕЛАТЬ
-        response = {}
-        for product in all_products:
-            for ingredient in product.recipe.recipeingredient_set.all():
-                if ingredient.ingredient.name in response:
-                    response[ingredient.ingredient.name] += ingredient.amount
-                else:
-                    response[ingredient.ingredient.name] = ingredient.amount
+        p = canvas.Canvas(response)
+        arial = ttfonts.TTFont("Arial", "data/arial.ttf")
+        pdfmetrics.registerFont(arial)
+        p.setFont("Arial", 14)
 
-        return Response(response)
+        ingredients = RecipeIngredient.objects.filter(
+            recipe__products__user=request.user
+        ).values_list(
+            "ingredient__name", "amount", "ingredient__measurement_unit"
+        )
+
+        ingr_list = {}
+        for name, amount, unit in ingredients:
+            if name not in ingr_list:
+                ingr_list[name] = {"amount": amount, "unit": unit}
+            else:
+                ingr_list[name]["amount"] += amount
+        height = 700
+
+        p.drawString(100, 750, "Список покупок")
+        for i, (name, data) in enumerate(ingr_list.items(), start=1):
+            p.drawString(
+                80, height, f"{i}. {name} – {data['amount']} {data['unit']}"
+            )
+            height -= 25
+        p.showPage()
+        p.save()
+        return response
 
     @action(
         detail=False, methods=['POST', 'DELETE'],
         url_path='(?P<recipe_id>\d+)/shopping_cart',
-        serializer_class=UserProductListSerializer
+        permission_classes=[IsAuthenticated]
     )
     def shopping_cart(self, request, recipe_id):
         recipe = get_object_or_404(Recipe, pk=recipe_id)
         if request.method == 'POST':
-            serializer = self.get_serializer(data=request.data)
+            serializer = UserProductListSerializer(
+                data=request.data, context={'request': self.request})
             if serializer.is_valid():
                 serializer.save(user=self.request.user, recipe=recipe)
                 return Response(serializer.data)
             return Response(serializer.errors)
 
-        # Todo: Изменить тут логику, ибо при повторной отправке будет ошибка
         recipe = recipe.products.get(user=self.request.user)
         recipe.delete()
         return Response({'Message': "Рецепт успешно убран из списка покупок"})
@@ -93,35 +134,20 @@ class RecipesView(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
 
-# + Сделать фильтрацию по имени (частичное вхождение)
-# + Здесь пагинация не нужна
 class IngredientsView(viewsets.ReadOnlyModelViewSet):
     """Представление для ингредиентов"""
     queryset = Ingredient.objects.all()
     serializer_class = IngredientsSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = IngredientsFilter
-    pagination_class = [AllowAny]
+    pagination_class = None
 
 
-# + Список пользователей, Регистрация пользователей, Текущий пользователь,
-# + Изменение пароля
 class CustomUserViewSet(UserViewSet):
     """Представление для пользователей Djoiser"""
     queryset = User.objects.all()
     serializer_class = CustomUserSerializer
-
-    # + Профиль пользователей (по id)
-    @action(
-        detail=False, methods=['GET'], url_path='(?P<user_id>\d+)',
-        serializer_class=CustomUserSerializer,
-        permission_classes=[AllowAny]
-    )
-    def profile(self, request, user_id):
-        """Страница профиля пользователя"""
-        user = get_object_or_404(User, pk=user_id)
-        serializer = self.get_serializer(user)
-        return Response(serializer.data)
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     @action(detail=False, methods=['GET'], url_path='subscriptions')
     def subscriptions(self, request):
@@ -132,8 +158,6 @@ class CustomUserViewSet(UserViewSet):
         data = FollowUserSerializer(page, many=True)
         return self.get_paginated_response(data.data)
 
-    # + Доступно только авторизованным пользователям
-    # TODO: Сделать фильтрацию по recipes_limit
     @action(
         detail=False, methods=['POST', 'DELETE'],
         url_path='(?P<user_id>\d+)/subscribe',
@@ -172,13 +196,12 @@ class CustomUserViewSet(UserViewSet):
         return Response({"Ошибка": "Пользователь не найден"})
 
 
-# + Список Тегов, Получение тега
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
+    pagination_class = None
 
 
-# + Удаление токена авторизации
 class Logout(APIView):
     """Представление для token/logout"""
     permission_classes = [IsAuthenticated]
@@ -188,7 +211,6 @@ class Logout(APIView):
         return Response(status=status.HTTP_201_CREATED)
 
 
-# + Получить токен авторизации
 class CustomAuthToken(APIView):
     serializer_class = CustomObtainTokenSerializer
 

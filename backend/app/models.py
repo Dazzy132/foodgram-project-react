@@ -33,7 +33,7 @@ class Ingredient(models.Model):
         ordering = ('pk',)
 
     def __str__(self):
-        return self.name
+        return f'{self.name} | {self.measurement_unit}'
 
 
 class Recipe(models.Model):
@@ -100,6 +100,7 @@ class FavoriteRecipe(models.Model):
         return f'{self.user} - {self.recipe.name}'
 
 
+# TODO: Переименовать в ShoppingCart и связи переделать
 class UserProductList(models.Model):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='products',
@@ -110,6 +111,11 @@ class UserProductList(models.Model):
         on_delete=models.CASCADE
     )
 
+    class Meta:
+        verbose_name = 'Корзина продуктов'
+        verbose_name_plural = 'Корзины продуктов'
+
     def __str__(self):
         return f'{self.user} - рецепт {self.recipe.name} - автора ' \
                f'{self.recipe.author.username}'
+
