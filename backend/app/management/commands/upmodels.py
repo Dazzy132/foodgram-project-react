@@ -6,7 +6,6 @@ from django.core.management import BaseCommand
 
 from app.models import Ingredient
 
-
 TABLES = {
     Ingredient: 'ingredients.csv',
 }

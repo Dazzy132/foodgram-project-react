@@ -1,6 +1,6 @@
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from django.contrib.auth.models import AbstractUser
 
 from users.validators import validate_username
 
@@ -25,3 +25,25 @@ class User(AbstractUser):
     REQUIRED_FIELDS = (
         'email', 'first_name', 'last_name', 'password'
     )
+
+
+class Follow(models.Model):
+    follower = models.ForeignKey(
+        User,
+        verbose_name='Подписчик',
+        related_name='follower',
+        on_delete=models.CASCADE
+    )
+    following = models.ForeignKey(
+        User,
+        verbose_name='Автор рецептов',
+        related_name='following',
+        on_delete=models.CASCADE
+    )
+
+    def __str__(self):
+        return f'{self.follower} подписан на {self.following}'
+
+    class Meta:
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'

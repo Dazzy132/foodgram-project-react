@@ -1,5 +1,6 @@
 from colorfield.fields import ColorField
 from django.db import models
+
 from users.models import User
 
 
@@ -47,7 +48,7 @@ class Recipe(models.Model):
         'Время приготовления', help_text='В минутах'
     )
     # https://stackoverflow.com/questions/39576174/save-base64-image-in-django-file-field
-    image = models.ImageField('Изображение', upload_to='photo/%Y/%m/%d/')
+    image = models.ImageField('Изображение', upload_to='recipes/')
     tags = models.ManyToManyField(
         Tag, related_name='recipes', verbose_name='Тэги'
     )
