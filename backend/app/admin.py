@@ -7,7 +7,7 @@ from . import models
 
 @admin.register(models.Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
-    list_display = ['name', 'measurement_unit']
+    list_display = ['id', 'name', 'measurement_unit']
 
 
 @admin.register(models.Recipe)
@@ -31,3 +31,21 @@ class TagAdmin(admin.ModelAdmin):
     list_editable = ['color']
     prepopulated_fields = {'slug': ('name',)}
 
+
+# @admin.register(models.RecipeIngredient)
+# class RecipeIngredientAdmin(admin.ModelAdmin):
+#     list_display = ['recipe', 'ingredient', 'amount']
+#
+#
+# @admin.register(models.FavoriteRecipe)
+# class RecipeIngredientAdmin(admin.ModelAdmin):
+#     list_display = ['user', 'recipe']
+#
+#
+# @admin.register(models.UserProductList)
+# class RecipeIngredientAdmin(admin.ModelAdmin):
+#     list_display = ['user', 'recipe']
+
+admin.site.register(models.RecipeIngredient)
+admin.site.register(models.FavoriteRecipe)
+admin.site.register(models.UserProductList)

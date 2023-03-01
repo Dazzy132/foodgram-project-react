@@ -1,22 +1,21 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
-from rest_framework.pagination import PageNumberPagination
-from rest_framework import viewsets, status
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from users.models import User, Follow
-from .utils import ListView, CreateView
+from app.models import Ingredient, Recipe
+from users.models import Follow, User
 
-from app.models import Recipe, Ingredient
-
-from .serializers import RecipeSerializer, IngredientsSerializer, \
-    CustomUserSerializer, FollowUserSerializer, FollowSerializer
+from .serializers import (CustomUserProfileSerializer, CustomUserSerializer,
+                          FollowSerializer, FollowUserSerializer,
+                          IngredientsSerializer, RecipeSerializer)
 
 
 class RecipesView(viewsets.ModelViewSet):
+    """Представление для рецептов"""
     model = Recipe
     queryset = Recipe.objects.select_related('author')
     serializer_class = RecipeSerializer
@@ -26,16 +25,31 @@ class RecipesView(viewsets.ModelViewSet):
 
 
 class IngredientsView(viewsets.ReadOnlyModelViewSet):
+    """Представление для ингредиентов"""
     queryset = Ingredient.objects.all()
     serializer_class = IngredientsSerializer
 
 
 class CustomUserViewSet(UserViewSet):
+    """Представление для пользователей Djoiser"""
     queryset = User.objects.all()
     serializer_class = CustomUserSerializer
+    permission_classes = [AllowAny]
+
+    @action(
+        detail=False, methods=['GET'], url_path='(?P<user_id>\d+)',
+        serializer_class=CustomUserProfileSerializer
+    )
+    def profile(self, request, user_id):
+        """Страница профиля пользователя"""
+        user = get_object_or_404(User, pk=user_id)
+        serializer = self.get_serializer(user)
+        print(serializer)
+        return Response(serializer.data)
 
     @action(detail=False, methods=['GET'], url_path='subscriptions')
     def subscriptions(self, request):
+        """Страница всех подписок пользователя"""
         current_user = self.request.user
         authors = Follow.objects.filter(follower=current_user)
         page = self.paginate_queryset(authors)
@@ -51,6 +65,7 @@ class CustomUserViewSet(UserViewSet):
         serializer_class=FollowSerializer
     )
     def subscribe(self, request, user_id):
+        """Подписка на пользователя по его ID"""
         author = get_object_or_404(User, pk=user_id)
         serializer = self.get_serializer(data={'following': author.pk})
 
@@ -70,24 +85,8 @@ class CustomUserViewSet(UserViewSet):
         return Response({"Ошибка": "Пользователь не найден"})
 
 
-# class FollowingsUserViewSet(ListView):
-#     serializer_class = FollowUserSerializer
-#
-#     def get_queryset(self):
-#         return Follow.objects.filter(follower=self.request.user)
-#
-#
-# class FollowingUserViewSet(CreateView):
-#     queryset = Follow.objects.all()
-#     serializer_class = FollowSerializer
-#
-#     def perform_create(self, serializer):
-#         following = get_object_or_404(User, pk=self.kwargs.get("user_id"))
-#         serializer.save(follower=self.request.user,
-#                         following=following)
-
-
 class Logout(APIView):
+    """Представление для token/logout"""
     permission_classes = [AllowAny]
 
     def post(self, request):
