@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 from djoser.serializers import UserSerializer
 from rest_framework import serializers
 
-from app.models import Ingredient, Recipe, Tag
+from app.models import Ingredient, Recipe, Tag, FavoriteRecipe, UserProductList
 from users.models import Follow, User
 
 
@@ -80,11 +80,10 @@ class RecipeSerializer(serializers.ModelSerializer):
 class RecipeSerializerShort(serializers.ModelSerializer):
     """Сериализатор для рецептов (укороченный)"""
     image = Base64ImageField(required=False, allow_null=False)
-    tags = TagSerializerShort(many=True)
 
     class Meta:
         model = Recipe
-        fields = ('id', 'name', 'image', 'tags')
+        fields = ('id', 'name', 'image', 'cooking_time')
 
 
 class CustomUserSerializer(UserSerializer):
@@ -177,3 +176,22 @@ class FollowUserSerializer(serializers.Serializer):
     def get_recipes(self, obj):
         recipes_filter = Recipe.objects.filter(author__follower=obj)
         return RecipeSerializerShort(recipes_filter, many=True).data
+
+
+class FavoriteRecipeSerializer(serializers.ModelSerializer):
+    user = serializers.SlugRelatedField(
+        slug_field='username', default=serializers.CurrentUserDefault(),
+        read_only=True
+    )
+    recipe = RecipeSerializerShort(read_only=True)
+
+    class Meta:
+        model = FavoriteRecipe
+        fields = ('user', 'recipe',)
+
+
+class UserProductListSerializer(FavoriteRecipeSerializer):
+
+    class Meta:
+        model = UserProductList
+        fields = ('user', 'recipe',)

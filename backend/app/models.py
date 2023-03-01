@@ -70,7 +70,7 @@ class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
     # Количество ингредиента, необходимое для рецепта
-    amount = models.DecimalField(max_digits=6, decimal_places=2)
+    amount = models.PositiveSmallIntegerField()
 
     class Meta:
         verbose_name = 'Кол-во ингридиентов в рецепте'
@@ -81,12 +81,11 @@ class RecipeIngredient(models.Model):
 
 
 class FavoriteRecipe(models.Model):
-
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='favorites',
         verbose_name='Пользователь'
     )
-    recipes = models.ForeignKey(
+    recipe = models.ForeignKey(
         Recipe, related_name='favorites', verbose_name='Любимые рецепты',
         on_delete=models.CASCADE
     )
@@ -95,8 +94,8 @@ class FavoriteRecipe(models.Model):
         verbose_name = 'Любимый рецепт'
         verbose_name_plural = 'Любимые рецепты'
 
-    # def __str__(self):
-    #     return f'{self.user} - {self.recipes}'
+    def __str__(self):
+        return f'{self.user} - {self.recipe.name}'
 
 
 class UserProductList(models.Model):
@@ -104,10 +103,10 @@ class UserProductList(models.Model):
         User, on_delete=models.CASCADE, related_name='products',
         verbose_name='Пользователь'
     )
-    recipes = models.ForeignKey(
-        Recipe, related_name='products', verbose_name='Рецепты',
+    recipe = models.ForeignKey(
+        Recipe, related_name='products', verbose_name='Рецепт',
         on_delete=models.CASCADE
     )
 
     def __str__(self):
-        return f'{self.user} - {self.recipes}'
+        return f'{self.user} - рецепт {self.recipe.name}'

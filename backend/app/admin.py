@@ -12,7 +12,7 @@ class IngredientAdmin(admin.ModelAdmin):
 
 @admin.register(models.Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ['author', 'name', 'text', 'cooking_time',
+    list_display = ['id', 'author', 'name', 'text', 'cooking_time',
                     'image', 'get_tags', 'get_ingredients']
 
     def get_tags(self, obj):
