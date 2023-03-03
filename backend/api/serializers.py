@@ -132,35 +132,44 @@ class RecipePOSTSerializer(serializers.ModelSerializer):
         instance.cooking_time = validated_data.get(
             'cooking_time', instance.cooking_time
         )
+        instance.tags.set(validated_data.get('tags', instance.tags))
+
         ingredients_data = validated_data.get(
             'recipe_ingredient', instance.ingredients
         )
 
-        new_ingredients_data = []
-        for item in ingredients_data:
-            recipe_ingredient = item.get('id')
-            amount = item.get('amount')
-            test = RecipeIngredient.objects.create(
-                recipe=instance, ingredient=recipe_ingredient, amount=amount
+        instance.ingredients.clear()
+        for ing_data in ingredients_data:
+            RecipeIngredient.objects.create(
+                recipe=instance,
+                ingredient=ing_data.get('id'),
+                amount=ing_data.get('amount')
             )
-            # new_ingredients_data.append(test)
-
-        # instance.ingredients.set(new_ingredients_data)
-
-        # ingredients_data = validated_data.pop('recipe_ingredient')
-        # ingredients = instance.recipe_ingredient.all()
-        # print(ingredients_data)
-        # ingredients_serializer = RecipeIngredientSerializer(
-        #     ingredients, data=ingredients_data, many=True, partial=True
-        # )
-        # ingredients_serializer.is_valid(raise_exception=True)
-        # ingredients_serializer.save()
-
-        # Теги сами себя проверяют если введены неправильные
-        instance.tags.set(validated_data.get('tags', instance.tags))
 
         instance.save()
         return instance
+
+    # def update(self, instance, validated_data):
+    #     ingredients_data = validated_data.pop('recipe_ingredient')
+    #     instance.name = validated_data.get('name', instance.name)
+    #     instance.image = validated_data.get('image', instance.image)
+    #     instance.text = validated_data.get('text', instance.text)
+    #     instance.cooking_time = validated_data.get(
+    #         'cooking_time', instance.cooking_time
+    #     )
+    #     instance.tags.set(validated_data.get('tags', instance.tags))
+    #
+    #     instance.ingredients.all().delete()
+    #     for ingredient_data in ingredients_data:
+    #         ingredient_id = ingredient_data.get('id')
+    #         if ingredient_id:
+    #             ingredient = Ingredient.objects.get(pk=ingredient_id)
+    #             ingredient.amount = ingredient_data.get('amount')
+    #             ingredient.save()
+    #         else:
+    #             Ingredient.objects.create(recipe=instance, **ingredient_data)
+    #     instance.save()
+    #     return instance
 
     def create(self, validated_data):
         print(validated_data)
