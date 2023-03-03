@@ -62,7 +62,7 @@ class Recipe(models.Model):
         ordering = ('name',)
 
     def __str__(self):
-        return self.name
+        return f'{self.name} | Автор - {self.author.username}'
 
 
 class RecipeIngredient(models.Model):
@@ -111,4 +111,5 @@ class UserProductList(models.Model):
     )
 
     def __str__(self):
-        return f'{self.user} - рецепт {self.recipe.name}'
+        return f'{self.user} - рецепт {self.recipe.name} - автора ' \
+               f'{self.recipe.author.username}'

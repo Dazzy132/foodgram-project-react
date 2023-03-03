@@ -6,16 +6,17 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from app.models import Ingredient, Recipe, FavoriteRecipe, UserProductList, \
-    RecipeIngredient, Tag
+from app.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
+                        Tag, UserProductList)
 from users.models import Follow, User
-from .utils import CreateDestroyViewSet
 
 from .serializers import (CustomUserProfileSerializer, CustomUserSerializer,
-                          FollowSerializer, FollowUserSerializer,
-                          IngredientsSerializer, RecipeGETSerializer,
-                          FavoriteRecipeSerializer, UserProductListSerializer,
-                          RecipeIngredientSerializer, TagSerializer, RecipePOSTSerializer)
+                          FavoriteRecipeSerializer, FollowSerializer,
+                          FollowUserSerializer, IngredientsSerializer,
+                          RecipeGETSerializer, RecipeIngredientSerializer,
+                          RecipePOSTSerializer, TagSerializer,
+                          UserProductListSerializer)
+from .utils import CreateDestroyViewSet
 
 
 class RecipesView(viewsets.ModelViewSet):
