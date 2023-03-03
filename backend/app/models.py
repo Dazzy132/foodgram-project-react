@@ -23,7 +23,7 @@ class Tag(models.Model):
 
 
 class Ingredient(models.Model):
-    """Модель для ингридиентов"""
+    """Модель для ингредиентов"""
     name = models.CharField('Название', max_length=100)
     measurement_unit = models.CharField('Единица изменения', max_length=30)
 
@@ -47,7 +47,6 @@ class Recipe(models.Model):
     cooking_time = models.PositiveSmallIntegerField(
         'Время приготовления', help_text='В минутах'
     )
-    # https://stackoverflow.com/questions/39576174/save-base64-image-in-django-file-field
     image = models.ImageField('Изображение', upload_to='recipes/')
     tags = models.ManyToManyField(
         Tag, related_name='recipes', verbose_name='Тэги'
@@ -67,9 +66,12 @@ class Recipe(models.Model):
 
 
 class RecipeIngredient(models.Model):
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
-    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
-    # Количество ингредиента, необходимое для рецепта
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE, related_name='recipe_ingredient'
+    )
+    ingredient = models.ForeignKey(
+        Ingredient, on_delete=models.CASCADE, related_name='recipe_ingredient'
+    )
     amount = models.PositiveSmallIntegerField()
 
     class Meta:

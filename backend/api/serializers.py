@@ -5,7 +5,8 @@ from django.shortcuts import get_object_or_404
 from djoser.serializers import UserSerializer
 from rest_framework import serializers
 
-from app.models import Ingredient, Recipe, Tag, FavoriteRecipe, UserProductList
+from app.models import Ingredient, Recipe, Tag, FavoriteRecipe, \
+    UserProductList, RecipeIngredient
 from users.models import Follow, User
 
 
@@ -47,12 +48,59 @@ class TagSerializerShort(serializers.ModelSerializer):
         fields = ('name',)
 
 
-class RecipeSerializer(serializers.ModelSerializer):
+class CustomUserSerializer(UserSerializer):
+    """Сериализатор для пользователей Djoiser"""
+    is_subscribed = serializers.SerializerMethodField(default=True)
+
+    def get_is_subscribed(self, obj):
+        author = get_object_or_404(User, username=obj.username)
+        user = self.context.get('request').user
+
+        if author.pk == user.pk:
+            return False
+
+        return Follow.objects.filter(follower=user, following=author).exists()
+
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'username', 'first_name', 'last_name',
+                  'is_subscribed')
+
+
+class RecipeIngredientSerializer(serializers.ModelSerializer):
+    id = serializers.PrimaryKeyRelatedField(
+       queryset=Ingredient.objects.all()
+    )
+
+    class Meta:
+        model = RecipeIngredient
+        fields = ('id', 'amount')
+
+
+class RecipeIngredientGETSerializer(serializers.ModelSerializer):
+    id = serializers.PrimaryKeyRelatedField(
+        queryset=Ingredient.objects.all(), source='ingredient.pk'
+    )
+    name = serializers.CharField(source='ingredient.name')
+    measurement_unit = serializers.CharField(
+        source='ingredient.measurement_unit'
+    )
+
+    class Meta:
+        model = RecipeIngredient
+        fields = ('id', 'name', 'measurement_unit', 'amount')
+
+
+class RecipeGETSerializer(serializers.ModelSerializer):
     """Сериализатор для рецептов"""
-    author = UserSerializer(read_only=True,
-                            default=serializers.CurrentUserDefault())
+    author = CustomUserSerializer(
+        read_only=True, default=serializers.CurrentUserDefault()
+    )
+    tags = TagSerializer(many=True)
     image = Base64ImageField(required=False, allow_null=False)
-    ingredients = IngredientsSerializer(many=True)
+    ingredients = RecipeIngredientGETSerializer(
+        many=True, read_only=True, source='recipe_ingredient'
+    )
 
     def create(self, validated_data):
         ingredients_data = validated_data.pop('ingredients')
@@ -77,24 +125,51 @@ class RecipeSerializer(serializers.ModelSerializer):
         read_only_fields = ('author',)
 
 
-class RecipeSerializerShort(serializers.ModelSerializer):
+class RecipePOSTSerializer(serializers.ModelSerializer):
     """Сериализатор для рецептов (укороченный)"""
     image = Base64ImageField(required=False, allow_null=False)
+    tags = serializers.PrimaryKeyRelatedField(many=True,
+                                              queryset=Tag.objects.all())
+    ingredients = RecipeIngredientSerializer(
+        many=True, source='recipe_ingredient'
+    )
+
+    def create(self, validated_data):
+        ingredients_data = validated_data.pop('recipe_ingredient')
+        tags_data = validated_data.pop('tags')
+
+        recipe = Recipe.objects.create(**validated_data)
+        recipe.tags.set(tags_data)
+
+        for ingredient in ingredients_data:
+            ing = get_object_or_404(
+                Ingredient, name=ingredient.get('id')
+            )
+
+            amount = ingredient.get('amount')
+
+            RecipeIngredient.objects.create(
+                recipe=recipe,
+                ingredient=ing,
+                amount=amount
+            )
+
+        return recipe
+
+    def to_representation(self, instance):
+        return RecipeGETSerializer(
+            instance, context={'request': self.context.get('request')}
+        ).data
 
     class Meta:
         model = Recipe
-        fields = ('id', 'name', 'image', 'cooking_time')
-
-
-class CustomUserSerializer(UserSerializer):
-    """Сериализатор для пользователей Djoiser"""
-    class Meta:
-        model = User
-        fields = ('id', 'email', 'username', 'first_name', 'last_name')
+        fields = ('id', 'ingredients', 'name', 'image', 'tags', 'cooking_time')
 
 
 class CustomUserRegisterSerializer(UserSerializer):
     """Сериализатор для регистрации пользователей Djoiser"""
+    password = serializers.CharField(write_only=True)
+
     class Meta:
         model = User
         fields = ('id', 'email', 'username', 'password', 'first_name',
@@ -114,8 +189,8 @@ class CustomUserProfileSerializer(UserSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'is_subscribed', 'email', 'username', 'first_name',
-                  'last_name')
+        fields = ('id', 'email', 'username', 'first_name',
+                  'last_name', 'is_subscribed')
 
 
 class FollowSerializer(serializers.ModelSerializer):
@@ -144,7 +219,7 @@ class FollowSerializer(serializers.ModelSerializer):
         recipes_count = user_recipes.count()
 
         user_serializer = CustomUserSerializer(user)
-        recipes_serializer = RecipeSerializerShort(user_recipes, many=True)
+        recipes_serializer = RecipeGETSerializer(user_recipes, many=True)
 
         response = {}
         response.update(user_serializer.data)
@@ -175,7 +250,7 @@ class FollowUserSerializer(serializers.Serializer):
 
     def get_recipes(self, obj):
         recipes_filter = Recipe.objects.filter(author__follower=obj)
-        return RecipeSerializerShort(recipes_filter, many=True).data
+        return RecipeGETSerializer(recipes_filter, many=True).data
 
 
 class FavoriteRecipeSerializer(serializers.ModelSerializer):
@@ -183,7 +258,7 @@ class FavoriteRecipeSerializer(serializers.ModelSerializer):
         slug_field='username', default=serializers.CurrentUserDefault(),
         read_only=True
     )
-    recipe = RecipeSerializerShort(read_only=True)
+    recipe = RecipeGETSerializer(read_only=True)
 
     class Meta:
         model = FavoriteRecipe

@@ -1,6 +1,7 @@
 from colorfield.fields import ColorField
 from django import forms
 from django.contrib import admin
+from django.utils.safestring import mark_safe
 
 from . import models
 
@@ -10,10 +11,23 @@ class IngredientAdmin(admin.ModelAdmin):
     list_display = ['id', 'name', 'measurement_unit']
 
 
+class IngredientsInlineAdmin(admin.TabularInline):
+    model = models.Recipe.ingredients.through
+    extra = 1
+
+
 @admin.register(models.Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = ['id', 'author', 'name', 'text', 'cooking_time',
-                    'image', 'get_tags', 'get_ingredients']
+                    'get_image', 'get_tags', 'get_ingredients']
+    fields = ('name', 'image', 'get_image', 'text', 'tags')
+    readonly_fields = ['get_image']
+    inlines = [
+        IngredientsInlineAdmin
+    ]
+
+    def get_image(self, obj):
+        return mark_safe(f'<img src={obj.image.url} height=40px weight=40px>')
 
     def get_tags(self, obj):
         return "\n".join([tag.name for tag in obj.tags.all()])

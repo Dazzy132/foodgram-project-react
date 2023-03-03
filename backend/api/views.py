@@ -1,4 +1,3 @@
-from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 from rest_framework import status, viewsets
@@ -7,21 +6,23 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from app.models import Ingredient, Recipe, FavoriteRecipe, UserProductList
+from app.models import Ingredient, Recipe, FavoriteRecipe, UserProductList, \
+    RecipeIngredient, Tag
 from users.models import Follow, User
 from .utils import CreateDestroyViewSet
 
 from .serializers import (CustomUserProfileSerializer, CustomUserSerializer,
                           FollowSerializer, FollowUserSerializer,
-                          IngredientsSerializer, RecipeSerializer,
-                          FavoriteRecipeSerializer, UserProductListSerializer)
+                          IngredientsSerializer, RecipeGETSerializer,
+                          FavoriteRecipeSerializer, UserProductListSerializer,
+                          RecipeIngredientSerializer, TagSerializer, RecipePOSTSerializer)
 
 
 class RecipesView(viewsets.ModelViewSet):
     """Представление для рецептов"""
     model = Recipe
     queryset = Recipe.objects.select_related('author')
-    serializer_class = RecipeSerializer
+    serializer_class = RecipeGETSerializer
 
     @action(
         detail=False, methods=['POST', 'DELETE'],
@@ -78,6 +79,11 @@ class RecipesView(viewsets.ModelViewSet):
         recipe = recipe.products.get(user=self.request.user)
         recipe.delete()
         return Response({'Message': "Рецепт успешно убран из списка покупок"})
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return RecipeGETSerializer
+        return RecipePOSTSerializer
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -144,13 +150,9 @@ class CustomUserViewSet(UserViewSet):
         return Response({"Ошибка": "Пользователь не найден"})
 
 
-# class FavoriteViewSet(CreateDestroyViewSet):
-#     queryset = FavoriteRecipe.objects.all()
-#     serializer_class = FavoriteRecipeSerializer
-#
-#     def perform_create(self, serializer):
-#         recipe = get_object_or_404(Recipe, pk=self.kwargs.get('recipe_id'))
-#         serializer.save(recipe=recipe, user=self.request.user)
+class TagViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
 
 
 class Logout(APIView):
@@ -160,3 +162,8 @@ class Logout(APIView):
     def post(self, request):
         request.user.auth_token.delete()
         return Response(status=status.HTTP_200_OK)
+
+
+class RecipeIngredientViewSet(viewsets.ModelViewSet):
+    queryset = RecipeIngredient.objects.all()
+    serializer_class = RecipeIngredientSerializer
