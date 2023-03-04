@@ -139,7 +139,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Модель пользователя
 AUTH_USER_MODEL = 'users.User'
 
-
 REST_FRAMEWORK = {
     # 'DEFAULT_PERMISSION_CLASSES': [
     #     'rest_framework.permissions.IsAuthenticatedOrReadOnly',
@@ -154,14 +153,18 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-   'ACCESS_TOKEN_LIFETIME': timedelta(days=2),
-   'AUTH_HEADER_TYPES': ('Bearer',),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=2),
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
 DJOSER = {
     'SERIALIZERS': {
+        'user': 'api.serializers.CustomUserSerializer',
         'user_create': 'api.serializers.CustomUserRegisterSerializer',
         'current_user': 'api.serializers.CustomUserSerializer',
     },
+    'PERMISSIONS': {
+        'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly',
+                 'rest_framework.permissions.IsAuthenticatedOrReadOnly']
+    }
 }
-

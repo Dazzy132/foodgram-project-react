@@ -1,8 +1,9 @@
 import base64
 
+from django.contrib.auth import authenticate
 from django.core.files.base import ContentFile
 from django.shortcuts import get_object_or_404
-from djoser.serializers import UserSerializer
+from djoser.serializers import UserSerializer, UserCreateSerializer
 from rest_framework import serializers
 
 from app.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
@@ -19,6 +20,31 @@ class Base64ImageField(serializers.ImageField):
             ext = format.split('/')[-1]
             data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
         return super().to_internal_value(data)
+
+
+class CustomObtainTokenSerializer(serializers.Serializer):
+    """Кастомный сериализатор проверки данных пользователей для выдачи
+    токена"""
+    email = serializers.CharField()
+    password = serializers.CharField()
+
+    def validate(self, attrs):
+        email = attrs.get('email')
+        password = attrs.get('password')
+
+        user = User.objects.filter(email=email)
+
+        # Если пользователь не нашелся по email
+        # Или пользователь есть и он ввёл неправильный пароль - выдать ошибку
+        if not user.exists() or user.exists() and not user[0].check_password(
+                password):
+            raise serializers.ValidationError('Неправильные данные для входа')
+
+        attrs['user'] = user[0]
+        return attrs
+
+    class Meta:
+        fields = ('email', 'password')
 
 
 class IngredientsSerializer(serializers.ModelSerializer):
@@ -43,9 +69,10 @@ class CustomUserSerializer(UserSerializer):
 
     def get_is_subscribed(self, obj):
         author = get_object_or_404(User, username=obj.username)
-        user = self.context.get('request').user
-
-        if author.pk == user.pk:
+        request = self.context.get('request')
+        user = request.user
+        # * Аноним может просматривать чужие профили
+        if user.is_anonymous or author.pk == user.pk:
             return False
 
         return Follow.objects.filter(follower=user, following=author).exists()
@@ -149,28 +176,6 @@ class RecipePOSTSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-    # def update(self, instance, validated_data):
-    #     ingredients_data = validated_data.pop('recipe_ingredient')
-    #     instance.name = validated_data.get('name', instance.name)
-    #     instance.image = validated_data.get('image', instance.image)
-    #     instance.text = validated_data.get('text', instance.text)
-    #     instance.cooking_time = validated_data.get(
-    #         'cooking_time', instance.cooking_time
-    #     )
-    #     instance.tags.set(validated_data.get('tags', instance.tags))
-    #
-    #     instance.ingredients.all().delete()
-    #     for ingredient_data in ingredients_data:
-    #         ingredient_id = ingredient_data.get('id')
-    #         if ingredient_id:
-    #             ingredient = Ingredient.objects.get(pk=ingredient_id)
-    #             ingredient.amount = ingredient_data.get('amount')
-    #             ingredient.save()
-    #         else:
-    #             Ingredient.objects.create(recipe=instance, **ingredient_data)
-    #     instance.save()
-    #     return instance
-
     def create(self, validated_data):
         print(validated_data)
         ingredients_data = validated_data.pop('recipe_ingredient')
@@ -207,8 +212,7 @@ class RecipePOSTSerializer(serializers.ModelSerializer):
         # ]
 
 
-# TODO: ПЕРЕДЕЛАТЬ НА UserRegisterSerializer
-class CustomUserRegisterSerializer(UserSerializer):
+class CustomUserRegisterSerializer(UserCreateSerializer):
     """Сериализатор для регистрации пользователей Djoiser"""
     password = serializers.CharField(write_only=True)
 
@@ -218,7 +222,6 @@ class CustomUserRegisterSerializer(UserSerializer):
                   'last_name')
 
 
-# TODO: Возможно тут тоже передалть
 class CustomUserProfileSerializer(UserSerializer):
     """Сериализатор для просмотра профиля пользователей Djoiser"""
     is_subscribed = serializers.SerializerMethodField(default=True)
@@ -258,11 +261,24 @@ class FollowSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         """Изменение ответа сериализатора"""
         user = instance.following
-        user_recipes = user.recipes.all()
+
+        recipes_limit = self.context.get('recipes_limit')
+        if recipes_limit:
+            user_recipes = user.recipes
+        else:
+            user_recipes = user.recipes.all()
+
         recipes_count = user_recipes.count()
 
-        user_serializer = CustomUserSerializer(user)
-        recipes_serializer = RecipeGETSerializer(user_recipes, many=True)
+        # * Контекст передается для того, чтобы не было ошибок с
+        # * представлениями (CustomUserSerializer)
+        user_serializer = CustomUserSerializer(user, context={
+            "request": self.context.get('request')
+        })
+        recipes_serializer = RecipeGETSerializer(
+            user_recipes, many=True,
+            context={'request': self.context.get('request')}
+        )
 
         response = {}
         response.update(user_serializer.data)

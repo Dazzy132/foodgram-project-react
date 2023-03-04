@@ -1,22 +1,25 @@
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
-from rest_framework import status, viewsets
+from rest_framework import status, viewsets, filters
+from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated, \
+    IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from app.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
-                        Tag, UserProductList)
+from app.models import Ingredient, Recipe, RecipeIngredient, Tag
 from users.models import Follow, User
 
-from .serializers import (CustomUserProfileSerializer, CustomUserSerializer,
-                          FavoriteRecipeSerializer, FollowSerializer,
-                          FollowUserSerializer, IngredientsSerializer,
-                          RecipeGETSerializer, RecipeIngredientSerializer,
-                          RecipePOSTSerializer, TagSerializer,
-                          UserProductListSerializer)
-from .utils import CreateDestroyViewSet
+from .serializers import (
+    CustomUserProfileSerializer, CustomUserSerializer,FavoriteRecipeSerializer,
+    FollowSerializer, FollowUserSerializer, IngredientsSerializer,
+    RecipeGETSerializer, RecipeIngredientSerializer, RecipePOSTSerializer,
+    TagSerializer, UserProductListSerializer, CustomObtainTokenSerializer
+)
+
+from .utils import IngredientsFilter
 
 
 class RecipesView(viewsets.ModelViewSet):
@@ -90,27 +93,34 @@ class RecipesView(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
 
+# + Сделать фильтрацию по имени (частичное вхождение)
+# + Здесь пагинация не нужна
 class IngredientsView(viewsets.ReadOnlyModelViewSet):
     """Представление для ингредиентов"""
     queryset = Ingredient.objects.all()
     serializer_class = IngredientsSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = IngredientsFilter
+    pagination_class = [AllowAny]
 
 
+# + Список пользователей, Регистрация пользователей, Текущий пользователь,
+# + Изменение пароля
 class CustomUserViewSet(UserViewSet):
     """Представление для пользователей Djoiser"""
     queryset = User.objects.all()
     serializer_class = CustomUserSerializer
-    permission_classes = [AllowAny]
 
+    # + Профиль пользователей (по id)
     @action(
         detail=False, methods=['GET'], url_path='(?P<user_id>\d+)',
-        serializer_class=CustomUserProfileSerializer
+        serializer_class=CustomUserSerializer,
+        permission_classes=[AllowAny]
     )
     def profile(self, request, user_id):
         """Страница профиля пользователя"""
         user = get_object_or_404(User, pk=user_id)
         serializer = self.get_serializer(user)
-        print(serializer)
         return Response(serializer.data)
 
     @action(detail=False, methods=['GET'], url_path='subscriptions')
@@ -121,19 +131,30 @@ class CustomUserViewSet(UserViewSet):
         page = self.paginate_queryset(authors)
         data = FollowUserSerializer(page, many=True)
         return self.get_paginated_response(data.data)
-        # authors_recipes = Recipe.objects.filter(
-        #     author__following__follower__username=current_user.username
-        # )
 
+    # + Доступно только авторизованным пользователям
+    # TODO: Сделать фильтрацию по recipes_limit
     @action(
         detail=False, methods=['POST', 'DELETE'],
         url_path='(?P<user_id>\d+)/subscribe',
-        serializer_class=FollowSerializer
+        serializer_class=FollowSerializer,
+        permission_classes=[IsAuthenticated]
     )
     def subscribe(self, request, user_id):
         """Подписка на пользователя по его ID"""
         author = get_object_or_404(User, pk=user_id)
-        serializer = self.get_serializer(data={'following': author.pk})
+
+        recipes_limit = self.request.query_params.get('recipes_limit', None)
+        if recipes_limit:
+            serializer = self.get_serializer(
+                data={'following': author.pk},
+                context={
+                    'request': self.request,
+                    'recipes_limit': recipes_limit
+                }
+            )
+        else:
+            serializer = self.get_serializer(data={'following': author.pk})
 
         if request.method == 'POST':
             if serializer.is_valid():
@@ -151,18 +172,36 @@ class CustomUserViewSet(UserViewSet):
         return Response({"Ошибка": "Пользователь не найден"})
 
 
+# + Список Тегов, Получение тега
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
 
 
+# + Удаление токена авторизации
 class Logout(APIView):
     """Представление для token/logout"""
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         request.user.auth_token.delete()
-        return Response(status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_201_CREATED)
+
+
+# + Получить токен авторизации
+class CustomAuthToken(APIView):
+    serializer_class = CustomObtainTokenSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(
+            data=request.data, context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+        token, created = Token.objects.get_or_create(user=user)
+        return Response(
+            {'auth_token': token.key}, status=status.HTTP_201_CREATED
+        )
 
 
 class RecipeIngredientViewSet(viewsets.ModelViewSet):

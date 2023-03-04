@@ -63,3 +63,8 @@ class TagAdmin(admin.ModelAdmin):
 admin.site.register(models.RecipeIngredient)
 admin.site.register(models.FavoriteRecipe)
 admin.site.register(models.UserProductList)
+
+
+admin.site.index_title = 'Админка'
+admin.site.site_title = 'Foodgram'
+admin.site.site_header = 'Административная панель Foodgram'
