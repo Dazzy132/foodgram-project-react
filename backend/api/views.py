@@ -34,10 +34,6 @@ class RecipesView(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.is_authenticated:
-            # Вернуть рецепты с аннотированными полями.
-            # Exists - подзапросы в БД.
-            # OuterRef - подзапрос в БД для того, чтобы сделать вычисления. В
-            # качестве аргументов будет выступать поле КАЖДОГО рецепта
             return Recipe.objects.annotate(
                 is_favorited=Exists(FavoriteRecipe.objects.filter(
                     user=self.request.user, recipe__pk=OuterRef('pk'))
@@ -45,13 +41,11 @@ class RecipesView(viewsets.ModelViewSet):
                 is_in_shopping_cart=Exists(UserProductList.objects.filter(
                     user=self.request.user, recipe__pk=OuterRef('pk'))
                 )
-            )
-        else:
-            # Value - созданное нами поле. Первое значение, второе тип поля
-            return Recipe.objects.annotate(
-                is_favorited=Value(False, output_field=BooleanField()),
-                is_in_shopping_cart=Value(False, output_field=BooleanField())
-            )
+            ).select_related('author')
+        return Recipe.objects.annotate(
+            is_favorited=Value(False, output_field=BooleanField()),
+            is_in_shopping_cart=Value(False, output_field=BooleanField())
+        ).select_related('author')
 
     @action(
         detail=False, methods=['POST', 'DELETE'],
