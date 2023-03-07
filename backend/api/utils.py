@@ -1,6 +1,5 @@
 import django_filters
 from django_filters.widgets import BooleanWidget
-
 from rest_framework.pagination import PageNumberPagination
 
 from app.models import Ingredient, Recipe, Tag

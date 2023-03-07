@@ -11,16 +11,15 @@ from rest_framework.permissions import (IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 
-from app.models import Ingredient, Recipe, RecipeIngredient, Tag, \
-    FavoriteRecipe, UserProductList
+from app.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
+                        Tag, UserProductList)
 from users.models import Follow, User
 
-from .serializers import (CustomUserSerializer,
-                          FavoriteRecipeSerializer, FollowSerializer,
-                          FollowUserSerializer, IngredientsSerializer,
-                          RecipeGETSerializer, RecipeIngredientSerializer,
-                          RecipePOSTSerializer, TagSerializer,
-                          UserProductListSerializer)
+from .serializers import (CustomUserSerializer, FavoriteRecipeSerializer,
+                          FollowSerializer, FollowUserSerializer,
+                          IngredientsSerializer, RecipeGETSerializer,
+                          RecipeIngredientSerializer, RecipePOSTSerializer,
+                          TagSerializer, UserProductListSerializer)
 from .utils import CustomPageNumberPagination, IngredientsFilter, RecipeFilter
 
 
