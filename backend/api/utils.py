@@ -1,4 +1,5 @@
 import django_filters
+from django_filters.widgets import BooleanWidget
 
 from rest_framework.pagination import PageNumberPagination
 
@@ -20,10 +21,18 @@ class RecipeFilter(django_filters.FilterSet):
         to_field_name='slug',
         queryset=Tag.objects.all(),
     )
+    is_in_shopping_cart = django_filters.BooleanFilter(
+        widget=BooleanWidget(),
+        label='В корзине.'
+    )
+    is_favorited = django_filters.BooleanFilter(
+        widget=BooleanWidget(),
+        label='В избранных.'
+    )
 
     class Meta:
         model = Recipe
-        fields = ['tags', 'author']
+        fields = ['author', 'tags', 'is_in_shopping_cart', 'is_favorited']
 
 
 class CustomPageNumberPagination(PageNumberPagination):

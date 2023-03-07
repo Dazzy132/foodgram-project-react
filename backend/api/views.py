@@ -1,21 +1,21 @@
+from django.db.models import BooleanField, Exists, OuterRef, Sum, Value
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from reportlab.pdfbase import pdfmetrics, ttfonts
 from reportlab.pdfgen import canvas
-from rest_framework import status, viewsets
-from rest_framework.authtoken.models import Token
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import (IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
-from app.models import Ingredient, Recipe, RecipeIngredient, Tag
+from app.models import Ingredient, Recipe, RecipeIngredient, Tag, \
+    FavoriteRecipe, UserProductList
 from users.models import Follow, User
 
-from .serializers import (CustomObtainTokenSerializer, CustomUserSerializer,
+from .serializers import (CustomUserSerializer,
                           FavoriteRecipeSerializer, FollowSerializer,
                           FollowUserSerializer, IngredientsSerializer,
                           RecipeGETSerializer, RecipeIngredientSerializer,
@@ -27,31 +27,31 @@ from .utils import CustomPageNumberPagination, IngredientsFilter, RecipeFilter
 class RecipesView(viewsets.ModelViewSet):
     """Представление для рецептов"""
     model = Recipe
-    queryset = Recipe.objects.select_related('author')
     serializer_class = RecipeGETSerializer
     pagination_class = CustomPageNumberPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = RecipeFilter
 
     def get_queryset(self):
-        is_favorited = self.request.query_params.get(
-            'is_favorited'
-        )
-        is_in_shopping_cart = self.request.query_params.get(
-            'is_in_shopping_cart'
-        )
-
         if self.request.user.is_authenticated:
-            if is_favorited == '1':
-                return Recipe.objects.filter(
-                    favorites__user=self.request.user
+            # Вернуть рецепты с аннотированными полями.
+            # Exists - подзапросы в БД.
+            # OuterRef - подзапрос в БД для того, чтобы сделать вычисления. В
+            # качестве аргументов будет выступать поле КАЖДОГО рецепта
+            return Recipe.objects.annotate(
+                is_favorited=Exists(FavoriteRecipe.objects.filter(
+                    user=self.request.user, recipe__pk=OuterRef('pk'))
+                ),
+                is_in_shopping_cart=Exists(UserProductList.objects.filter(
+                    user=self.request.user, recipe__pk=OuterRef('pk'))
                 )
-            if is_in_shopping_cart == '1':
-                return Recipe.objects.filter(
-                    products__user=self.request.user
-                )
-
-        return Recipe.objects.all()
+            )
+        else:
+            # Value - созданное нами поле. Первое значение, второе тип поля
+            return Recipe.objects.annotate(
+                is_favorited=Value(False, output_field=BooleanField()),
+                is_in_shopping_cart=Value(False, output_field=BooleanField())
+            )
 
     @action(
         detail=False, methods=['POST', 'DELETE'],
@@ -171,14 +171,17 @@ class CustomUserViewSet(UserViewSet):
         recipes_limit = self.request.query_params.get('recipes_limit', None)
         if recipes_limit:
             serializer = self.get_serializer(
-                data={'following': author.pk},
+                data={'following': author, 'follower': self.request.user},
                 context={
                     'request': self.request,
                     'recipes_limit': recipes_limit
                 }
             )
         else:
-            serializer = self.get_serializer(data={'following': author.pk})
+            serializer = self.get_serializer(
+                data={'following': author, 'follower': self.request.user},
+                context={'request': self.request}
+            )
 
         if request.method == 'POST':
             if serializer.is_valid():
@@ -200,30 +203,6 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
-
-
-class Logout(APIView):
-    """Представление для token/logout"""
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        request.user.auth_token.delete()
-        return Response(status=status.HTTP_201_CREATED)
-
-
-class CustomAuthToken(APIView):
-    serializer_class = CustomObtainTokenSerializer
-
-    def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(
-            data=request.data, context={'request': request}
-        )
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
-        token, created = Token.objects.get_or_create(user=user)
-        return Response(
-            {'auth_token': token.key}, status=status.HTTP_201_CREATED
-        )
 
 
 class RecipeIngredientViewSet(viewsets.ModelViewSet):
