@@ -93,14 +93,20 @@ class FavoriteRecipe(models.Model):
     )
 
     class Meta:
-        verbose_name = 'Любимый рецепт'
-        verbose_name_plural = 'Любимые рецепты'
+        verbose_name = 'Избранный рецепт'
+        verbose_name_plural = 'Избранные рецепты'
+        ordering = ('-id',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='unique_user_recipe'
+            )
+        ]
 
     def __str__(self):
         return f'{self.user} - {self.recipe.name}'
 
 
-# TODO: Переименовать в ShoppingCart и связи переделать
 class UserProductList(models.Model):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='products',
