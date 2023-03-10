@@ -91,8 +91,8 @@ class RecipeGETSerializer(serializers.ModelSerializer):
     ingredients = RecipeIngredientGETSerializer(
         many=True, read_only=True, source='recipe_ingredient'
     )
-    is_favorited = serializers.BooleanField()
-    is_in_shopping_cart = serializers.BooleanField()
+    is_favorited = serializers.BooleanField(default=False)
+    is_in_shopping_cart = serializers.BooleanField(default=False)
 
     class Meta:
         model = Recipe
@@ -115,20 +115,38 @@ class RecipePOSTSerializer(serializers.ModelSerializer):
         many=True, source='recipe_ingredient'
     )
 
+    # def update(self, instance, validated_data):
+    #     instance.name = validated_data.get('name', instance.name)
+    #     instance.image = validated_data.get('image', instance.image)
+    #     instance.text = validated_data.get('text', instance.text)
+    #     instance.cooking_time = validated_data.get(
+    #         'cooking_time', instance.cooking_time
+    #     )
+    #     instance.tags.set(validated_data.get('tags', instance.tags))
+    #
+    #     ingredients_data = validated_data.get(
+    #         'recipe_ingredient', instance.ingredients
+    #     )
+    #
+    #     instance.ingredients.clear()
+    #
+    #     RecipeIngredient.objects.bulk_create([
+    #         RecipeIngredient(
+    #             recipe=instance,
+    #             ingredient_id=ingredient.get('id').pk,
+    #             amount=ingredient.get('amount')
+    #         ) for ingredient in ingredients_data
+    #     ])
+    #
+    #     instance.save()
+    #     return instance
+
     def update(self, instance, validated_data):
-        instance.name = validated_data.get('name', instance.name)
-        instance.image = validated_data.get('image', instance.image)
-        instance.text = validated_data.get('text', instance.text)
-        instance.cooking_time = validated_data.get(
-            'cooking_time', instance.cooking_time
-        )
-        instance.tags.set(validated_data.get('tags', instance.tags))
-
-        ingredients_data = validated_data.get(
-            'recipe_ingredient', instance.ingredients
-        )
-
         instance.ingredients.clear()
+        instance.tags.clear()
+
+        ingredients_data = validated_data.pop('recipe_ingredient')
+        instance.tags.set(validated_data.get('tags', instance.tags))
 
         RecipeIngredient.objects.bulk_create([
             RecipeIngredient(
@@ -138,8 +156,7 @@ class RecipePOSTSerializer(serializers.ModelSerializer):
             ) for ingredient in ingredients_data
         ])
 
-        instance.save()
-        return instance
+        return super().update(instance, validated_data)
 
     def create(self, validated_data):
         ingredients_data = validated_data.pop('recipe_ingredient')
@@ -147,7 +164,6 @@ class RecipePOSTSerializer(serializers.ModelSerializer):
 
         recipe = Recipe.objects.create(**validated_data)
         recipe.tags.set(tags_data)
-
         for ingredient in ingredients_data:
             ing = get_object_or_404(Ingredient, name=ingredient.get('id').name)
             amount = ingredient.get('amount')

@@ -7,7 +7,8 @@ from djoser.views import UserViewSet
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import (IsAuthenticated,
-                                        IsAuthenticatedOrReadOnly)
+                                        IsAuthenticatedOrReadOnly,
+                                        SAFE_METHODS)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -34,6 +35,11 @@ class RecipesView(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_class = RecipeFilter
 
+    def get_serializer_class(self):
+        if self.request.method in SAFE_METHODS:
+            return RecipeGETSerializer
+        return RecipePOSTSerializer
+
     def get_queryset(self):
         if self.request.user.is_authenticated:
             annotate_kwargs = {
@@ -56,11 +62,6 @@ class RecipesView(viewsets.ModelViewSet):
             .select_related('author')
             .prefetch_related('tags', 'ingredients')
         )
-
-    def get_serializer_class(self):
-        if self.request.method == 'GET':
-            return RecipeGETSerializer
-        return RecipePOSTSerializer
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -152,6 +153,11 @@ class CustomUserViewSet(UserViewSet):
     queryset = User.objects.all()
     serializer_class = CustomUserSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_permissions(self):
+        if self.action == 'me':
+            self.permission_classes = [IsAuthenticated]
+        return super().get_permissions()
 
     @action(detail=False, methods=['GET'], url_path='subscriptions')
     def subscriptions(self, request):

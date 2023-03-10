@@ -2,6 +2,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import rest_framework.permissions
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -169,6 +170,7 @@ DJOSER = {
     'PERMISSIONS': {
         'user': ['rest_framework.permissions.IsAuthenticated'],
         'user_list': ['rest_framework.permissions.AllowAny'],
+        # 'current_user': ['rest_framework.permissions.IsAuthenticated'],
         'token_destroy': ['rest_framework.permissions.IsAuthenticated'],
     }
 }

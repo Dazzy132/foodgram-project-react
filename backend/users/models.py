@@ -28,6 +28,11 @@ class User(AbstractUser):
         'email', 'first_name', 'last_name', 'password'
     )
 
+    class Meta:
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
+        ordering = ('id',)
+
 
 class Follow(models.Model):
     follower = models.ForeignKey(
