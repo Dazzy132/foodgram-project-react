@@ -12,6 +12,6 @@ router.register(r'tags', TagViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('users/<int:user_id>/subcribe/', UserSubscribeViewSet.as_view()),
+    path('users/<int:user_id>/subscribe/', UserSubscribeViewSet.as_view()),
     path('auth/', include('djoser.urls.authtoken')),
 ]

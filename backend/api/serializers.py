@@ -6,7 +6,7 @@ from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
 
 from app.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
-                        Tag, ShoppingCart)
+                        ShoppingCart, Tag)
 from users.models import Follow, User
 
 
@@ -26,14 +26,11 @@ class CustomUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField(default=True)
 
     def get_is_subscribed(self, obj):
-        author = get_object_or_404(User, username=obj.username)
-        request = self.context.get('request')
-        user = request.user
-        # * Аноним может просматривать чужие профили
-        if user.is_anonymous or author.pk == user.pk:
+        user = self.context.get('request').user
+        if user.is_anonymous:
             return False
 
-        return Follow.objects.filter(follower=user, following=author).exists()
+        return user.follower.filter(following=obj.id).exists()
 
     class Meta:
         model = User
@@ -168,12 +165,12 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         recipe = Recipe.objects.create(**validated_data)
         recipe.tags.set(tags_data)
-        for ingredient in ingredients_data:
-            ing = get_object_or_404(Ingredient, name=ingredient.get('id').name)
-            amount = ingredient.get('amount')
 
+        for ingredient in ingredients_data:
             RecipeIngredient.objects.create(
-                recipe=recipe, ingredient=ing, amount=amount
+                recipe=recipe,
+                ingredient=ingredient.get('id'),
+                amount=ingredient.get('amount')
             )
 
         return recipe

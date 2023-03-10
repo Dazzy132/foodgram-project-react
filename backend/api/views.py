@@ -1,27 +1,26 @@
 from http import HTTPStatus
 
-from django.db.models import BooleanField, Exists, OuterRef, Value
+from django.db.models import Exists, OuterRef
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import (IsAuthenticated,
-                                        IsAuthenticatedOrReadOnly,
-                                        SAFE_METHODS)
+from rest_framework.permissions import (SAFE_METHODS, IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from app.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
-                        Tag, ShoppingCart)
+                        ShoppingCart, Tag)
 from users.models import Follow, User
-from .permissions import IsAdminAuthorOrReadOnly, IsAdminOrReadOnly
 
+from .permissions import IsAdminAuthorOrReadOnly, IsAdminOrReadOnly
 from .serializers import (CustomUserSerializer, FavoriteRecipeSerializer,
                           FollowCheckSubscribeSerializer, FollowSerializer,
                           IngredientsSerializer, RecipeGETSerializer,
                           RecipeIngredientSerializer, RecipeSerializer,
-                          TagSerializer, ShoppingCartSerializer)
+                          ShoppingCartSerializer, TagSerializer)
 from .utils import (CustomPageNumberPagination, IngredientsFilter,
                     RecipeFilter, get_pdf_shopping_cart)
 
@@ -50,18 +49,12 @@ class RecipesView(viewsets.ModelViewSet):
                     user=self.request.user, recipe__pk=OuterRef('pk'))
                 )
             }
-        else:
-            annotate_kwargs = {
-                'is_favorited': Value(False, output_field=BooleanField()),
-                'is_in_shopping_cart': Value(
-                    False, output_field=BooleanField())
-            }
-        return (
-            Recipe.objects
-            .annotate(**annotate_kwargs)
-            .select_related('author')
-            .prefetch_related('tags', 'ingredients')
-        )
+            return (
+                Recipe.objects
+                .annotate(**annotate_kwargs)
+                .select_related('author')
+                .prefetch_related('tags', 'ingredients')
+            )
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
