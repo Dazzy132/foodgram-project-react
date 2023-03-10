@@ -53,7 +53,7 @@ def get_pdf_shopping_cart(request):
     p.setFont("Arial", 14)
 
     ingredients = RecipeIngredient.objects.filter(
-        recipe__products__user=request.user
+        recipe__cart__user=request.user
     ).values_list(
         "ingredient__name", "amount", "ingredient__measurement_unit"
     )

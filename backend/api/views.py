@@ -13,15 +13,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from app.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
-                        Tag, UserProductList)
+                        Tag, ShoppingCart)
 from users.models import Follow, User
 from .permissions import IsAdminAuthorOrReadOnly, IsAdminOrReadOnly
 
 from .serializers import (CustomUserSerializer, FavoriteRecipeSerializer,
                           FollowCheckSubscribeSerializer, FollowSerializer,
                           IngredientsSerializer, RecipeGETSerializer,
-                          RecipeIngredientSerializer, RecipePOSTSerializer,
-                          TagSerializer, UserProductListSerializer)
+                          RecipeIngredientSerializer, RecipeSerializer,
+                          TagSerializer, ShoppingCartSerializer)
 from .utils import (CustomPageNumberPagination, IngredientsFilter,
                     RecipeFilter, get_pdf_shopping_cart)
 
@@ -38,7 +38,7 @@ class RecipesView(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.request.method in SAFE_METHODS:
             return RecipeGETSerializer
-        return RecipePOSTSerializer
+        return RecipeSerializer
 
     def get_queryset(self):
         if self.request.user.is_authenticated:
@@ -46,7 +46,7 @@ class RecipesView(viewsets.ModelViewSet):
                 'is_favorited': Exists(FavoriteRecipe.objects.filter(
                     user=self.request.user, recipe__pk=OuterRef('pk'))
                 ),
-                'is_in_shopping_cart': Exists(UserProductList.objects.filter(
+                'is_in_shopping_cart': Exists(ShoppingCart.objects.filter(
                     user=self.request.user, recipe__pk=OuterRef('pk'))
                 )
             }
@@ -111,7 +111,7 @@ class RecipesView(viewsets.ModelViewSet):
     def shopping_cart(self, request, recipe_id):
         recipe = get_object_or_404(Recipe, pk=recipe_id)
 
-        serializer = UserProductListSerializer(
+        serializer = ShoppingCartSerializer(
             data={'user': self.request.user.pk, 'recipe': recipe.pk},
             context={'request': self.request}
         )
@@ -125,7 +125,7 @@ class RecipesView(viewsets.ModelViewSet):
     @shopping_cart.mapping.delete
     def delete_shopping_cart(self, request, recipe_id):
         recipe = get_object_or_404(Recipe, pk=recipe_id)
-        del_recipe = recipe.products.filter(user=self.request.user)
+        del_recipe = recipe.cart.filter(user=self.request.user)
         if del_recipe.exists():
             del_recipe.delete()
             return Response(

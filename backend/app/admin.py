@@ -61,23 +61,9 @@ class TagAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
 
 
-# @admin.register(models.RecipeIngredient)
-# class RecipeIngredientAdmin(admin.ModelAdmin):
-#     list_display = ['recipe', 'ingredient', 'amount']
-#
-#
-# @admin.register(models.FavoriteRecipe)
-# class RecipeIngredientAdmin(admin.ModelAdmin):
-#     list_display = ['user', 'recipe']
-#
-#
-# @admin.register(models.UserProductList)
-# class RecipeIngredientAdmin(admin.ModelAdmin):
-#     list_display = ['user', 'recipe']
-
 admin.site.register(models.RecipeIngredient)
 admin.site.register(models.FavoriteRecipe)
-admin.site.register(models.UserProductList)
+admin.site.register(models.ShoppingCart)
 
 
 admin.site.index_title = 'Админка'
