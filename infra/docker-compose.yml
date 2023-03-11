@@ -9,9 +9,10 @@ services:
       - ./.env
 
   backend:
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
+    image: dazzy132/foodgram_backend:latest
+#    build:
+#      context: ../backend
+#      dockerfile: Dockerfile
     entrypoint: ./entrypoint.sh
     volumes:
       - static_value:/app/static/
@@ -22,9 +23,10 @@ services:
       - ./.env
 
   frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
+    image: dazzy132/foodgram_frontend:latest
+#    build:
+#      context: ../frontend
+#      dockerfile: Dockerfile
     volumes:
       - ../frontend/:/app/result_build/
     depends_on:
