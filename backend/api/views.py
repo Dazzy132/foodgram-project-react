@@ -50,13 +50,13 @@ class RecipesView(viewsets.ModelViewSet):
     def get_queryset(self):
         if self.request.user.is_authenticated:
             annotate_kwargs = {
-                    'is_favorited': Exists(FavoriteRecipe.objects.filter(
-                        user=self.request.user, recipe__pk=OuterRef('pk'))
-                    ),
-                    'is_in_shopping_cart': Exists(ShoppingCart.objects.filter(
-                        user=self.request.user, recipe__pk=OuterRef('pk'))
-                    )
-                }
+                'is_favorited': Exists(FavoriteRecipe.objects.filter(
+                    user=self.request.user, recipe__pk=OuterRef('pk'))
+                ),
+                'is_in_shopping_cart': Exists(ShoppingCart.objects.filter(
+                    user=self.request.user, recipe__pk=OuterRef('pk'))
+                )
+            }
             return self.recipe_objects(annotate_kwargs)
         return self.recipe_objects()
 
