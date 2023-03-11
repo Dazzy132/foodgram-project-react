@@ -19,8 +19,9 @@ class IngredientsInlineAdmin(admin.TabularInline):
 
 @admin.register(models.Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ['id', 'author', 'name', 'text', 'cooking_time',
-                    'get_image', 'get_tags', 'get_ingredients', 'get_favorites_count']
+    list_display = ['id', 'author', 'name', 'cooking_time',
+                    'get_image', 'get_tags', 'get_ingredients',
+                    'get_favorites_count']
     fields = ('author', 'name', 'image', 'get_image', 'text', 'cooking_time',
               'tags')
     readonly_fields = ['get_image']
@@ -34,7 +35,7 @@ class RecipeAdmin(admin.ModelAdmin):
         return mark_safe(f'<img src={obj.image.url} height=40px weight=40px>')
 
     def get_tags(self, obj):
-        return "\n".join([tag.name for tag in obj.tags.all()])
+        return "\n, ".join([tag.name for tag in obj.tags.all()])
 
     def get_favorites_count(self, obj):
         cnt = models.FavoriteRecipe.objects.filter(
@@ -43,7 +44,9 @@ class RecipeAdmin(admin.ModelAdmin):
         return cnt
 
     def get_ingredients(self, obj):
-        return "\n".join([ingredient.name for ingredient in obj.ingredients.all()])
+        return "\n, ".join(
+            [ingredient.name for ingredient in obj.ingredients.all()]
+        )
 
     get_image.short_description = 'Фотография рецепта'
     get_tags.short_description = 'Теги рецепта'
@@ -64,7 +67,6 @@ class TagAdmin(admin.ModelAdmin):
 admin.site.register(models.RecipeIngredient)
 admin.site.register(models.FavoriteRecipe)
 admin.site.register(models.ShoppingCart)
-
 
 admin.site.index_title = 'Админка'
 admin.site.site_title = 'Foodgram'
