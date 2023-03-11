@@ -56,13 +56,17 @@ class RecipesView(viewsets.ModelViewSet):
                 .prefetch_related('tags', 'ingredients')
             )
 
+        return (Recipe.objects
+                .select_related('author')
+                .prefetch_related('tags', 'ingredients'))
+
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
     @action(
         detail=False,
         methods=['POST'],
-        url_path='(?P<recipe_id>\d+)/favorite'
+        url_path=r'(?P<recipe_id>\d+)/favorite'
     )
     def favorite(self, request, recipe_id):
         recipe = get_object_or_404(Recipe, pk=recipe_id)
@@ -98,7 +102,7 @@ class RecipesView(viewsets.ModelViewSet):
 
     @action(
         detail=False, methods=['POST'],
-        url_path='(?P<recipe_id>\d+)/shopping_cart',
+        url_path=r'(?P<recipe_id>\d+)/shopping_cart',
         permission_classes=[IsAuthenticated]
     )
     def shopping_cart(self, request, recipe_id):

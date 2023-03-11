@@ -38,10 +38,7 @@ class RecipeAdmin(admin.ModelAdmin):
         return "\n, ".join([tag.name for tag in obj.tags.all()])
 
     def get_favorites_count(self, obj):
-        cnt = models.FavoriteRecipe.objects.filter(
-            recipe=obj
-        ).count()
-        return cnt
+        return models.FavoriteRecipe.objects.filter(recipe=obj).count()
 
     def get_ingredients(self, obj):
         return "\n, ".join(
