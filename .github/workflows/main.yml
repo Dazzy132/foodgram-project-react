@@ -1,6 +1,6 @@
 name: Foodgram-project
 
-on: [push]
+on: [ push ]
 
 jobs:
   tests:
