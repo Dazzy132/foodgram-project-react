@@ -147,4 +147,3 @@ class ShoppingCart(models.Model):
             f'Пользователь {self.user} | Рецепт {self.recipe}'
             f' от {self.recipe.name}'
         )
-
