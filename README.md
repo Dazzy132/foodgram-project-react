@@ -8,6 +8,7 @@
 Адрес сайта: http://backend-dazzy132.sytes.net/
 IP сайта: 158.160.24.49 
 
+username = yakov
 email = yakov-varnaev@yandex.ru
 password = coolpassword123
 ```
