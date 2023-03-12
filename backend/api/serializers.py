@@ -62,7 +62,6 @@ class CustomUserProfileSerializer(UserSerializer):
         author = get_object_or_404(User, username=obj.username)
         request = self.context.get('request')
         user = request.user
-        # * Аноним может просматривать чужие профили
         if user.is_anonymous or author.pk == user.pk:
             return False
 
