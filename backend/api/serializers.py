@@ -1,6 +1,7 @@
 import base64
 
 from django.core.files.base import ContentFile
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
@@ -142,6 +143,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         many=True, source='recipe_ingredient'
     )
 
+    @transaction.atomic()
     def update(self, instance, validated_data):
         instance.ingredients.clear()
         instance.tags.clear()
@@ -159,6 +161,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         return super().update(instance, validated_data)
 
+    @transaction.atomic()
     def create(self, validated_data):
         ingredients_data = validated_data.pop('recipe_ingredient')
         tags_data = validated_data.pop('tags')

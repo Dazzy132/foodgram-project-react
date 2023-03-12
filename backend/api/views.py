@@ -1,5 +1,6 @@
 from http import HTTPStatus
 
+from django.db import transaction
 from django.db.models import Exists, OuterRef
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -57,6 +58,7 @@ class RecipesView(viewsets.ModelViewSet):
             .annotate(**annotate_kwargs)
         )
 
+    @transaction.atomic()
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
