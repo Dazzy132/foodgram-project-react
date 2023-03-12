@@ -3,6 +3,7 @@ from http import HTTPStatus
 from django.db.models import Exists, OuterRef
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from djoser.permissions import CurrentUserOrAdminOrReadOnly
 from djoser.views import UserViewSet
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -14,8 +15,7 @@ from app.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
                         ShoppingCart, Tag)
 from users.models import Follow, User
 
-from .permissions import (IsAdminAuthorOrReadOnly,
-                          IsAdminCurrentUserOrReadOnly, IsAdminOrReadOnly)
+from .permissions import IsAdminAuthorOrReadOnly, IsAdminOrReadOnly
 from .serializers import (CustomUserSerializer, FavoriteRecipeSerializer,
                           FollowCheckSubscribeSerializer, FollowSerializer,
                           IngredientsSerializer, RecipeGETSerializer,
@@ -39,15 +39,8 @@ class RecipesView(viewsets.ModelViewSet):
             return RecipeGETSerializer
         return RecipeSerializer
 
-    def recipe_objects(self, annotate=None):
-        return (
-            Recipe.objects
-            .select_related('author')
-            .prefetch_related('tags', 'ingredients')
-            .annotate(**annotate) if annotate else None
-        )
-
     def get_queryset(self):
+        annotate_kwargs = {}
         if self.request.user.is_authenticated:
             annotate_kwargs = {
                 'is_favorited': Exists(FavoriteRecipe.objects.filter(
@@ -57,8 +50,12 @@ class RecipesView(viewsets.ModelViewSet):
                     user=self.request.user, recipe__pk=OuterRef('pk'))
                 )
             }
-            return self.recipe_objects(annotate_kwargs)
-        return self.recipe_objects()
+        return (
+            Recipe.objects
+            .select_related('author')
+            .prefetch_related('tags', 'ingredients')
+            .annotate(**annotate_kwargs)
+        )
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -149,7 +146,7 @@ class CustomUserViewSet(UserViewSet):
     """Представление для пользователей Djoiser"""
     queryset = User.objects.all()
     serializer_class = CustomUserSerializer
-    permission_classes = [IsAdminCurrentUserOrReadOnly]
+    permission_classes = [CurrentUserOrAdminOrReadOnly]
 
     def get_permissions(self):
         if self.action == 'me':
