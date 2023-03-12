@@ -1,13 +1,18 @@
 import base64
 
+from app.models import (
+    FavoriteRecipe,
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    ShoppingCart,
+    Tag,
+)
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
-
-from app.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
-                        ShoppingCart, Tag)
 from users.models import Follow, User
 
 

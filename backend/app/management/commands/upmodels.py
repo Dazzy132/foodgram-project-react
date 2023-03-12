@@ -1,9 +1,8 @@
 import csv
 
+from app.models import Ingredient
 from django.conf import settings
 from django.core.management import BaseCommand
-
-from app.models import Ingredient
 
 TABLES = {
     Ingredient: 'ingredients.csv',

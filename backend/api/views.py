@@ -1,5 +1,13 @@
 from http import HTTPStatus
 
+from app.models import (
+    FavoriteRecipe,
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    ShoppingCart,
+    Tag,
+)
 from django.db import transaction
 from django.db.models import Exists, OuterRef
 from django.shortcuts import get_object_or_404
@@ -11,19 +19,27 @@ from rest_framework.decorators import action
 from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from app.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
-                        ShoppingCart, Tag)
 from users.models import Follow, User
 
 from .permissions import IsAdminAuthorOrReadOnly, IsAdminOrReadOnly, ReadOnly
-from .serializers import (CustomUserSerializer, FavoriteRecipeSerializer,
-                          FollowCheckSubscribeSerializer, FollowSerializer,
-                          IngredientsSerializer, RecipeGETSerializer,
-                          RecipeIngredientSerializer, RecipeSerializer,
-                          ShoppingCartSerializer, TagSerializer)
-from .utils import (CustomPageNumberPagination, IngredientsFilter,
-                    RecipeFilter, get_pdf_shopping_cart)
+from .serializers import (
+    CustomUserSerializer,
+    FavoriteRecipeSerializer,
+    FollowCheckSubscribeSerializer,
+    FollowSerializer,
+    IngredientsSerializer,
+    RecipeGETSerializer,
+    RecipeIngredientSerializer,
+    RecipeSerializer,
+    ShoppingCartSerializer,
+    TagSerializer,
+)
+from .utils import (
+    CustomPageNumberPagination,
+    IngredientsFilter,
+    RecipeFilter,
+    get_pdf_shopping_cart,
+)
 
 
 class RecipesView(viewsets.ModelViewSet):

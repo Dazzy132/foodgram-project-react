@@ -1,11 +1,10 @@
 import django_filters
+from app.models import Ingredient, Recipe, RecipeIngredient, Tag
 from django.http import HttpResponse
 from django_filters.widgets import BooleanWidget
 from reportlab.pdfbase import pdfmetrics, ttfonts
 from reportlab.pdfgen import canvas
 from rest_framework.pagination import PageNumberPagination
-
-from app.models import Ingredient, Recipe, RecipeIngredient, Tag
 
 
 class IngredientsFilter(django_filters.FilterSet):
