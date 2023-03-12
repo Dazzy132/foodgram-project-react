@@ -16,7 +16,7 @@ from app.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
                         ShoppingCart, Tag)
 from users.models import Follow, User
 
-from .permissions import IsAdminAuthorOrReadOnly, IsAdminOrReadOnly
+from .permissions import IsAdminAuthorOrReadOnly, IsAdminOrReadOnly, ReadOnly
 from .serializers import (CustomUserSerializer, FavoriteRecipeSerializer,
                           FollowCheckSubscribeSerializer, FollowSerializer,
                           IngredientsSerializer, RecipeGETSerializer,
@@ -148,7 +148,7 @@ class CustomUserViewSet(UserViewSet):
     """Представление для пользователей Djoiser"""
     queryset = User.objects.all()
     serializer_class = CustomUserSerializer
-    permission_classes = [CurrentUserOrAdminOrReadOnly]
+    permission_classes = [CurrentUserOrAdminOrReadOnly | ReadOnly]
 
     def get_permissions(self):
         if self.action == 'me':
