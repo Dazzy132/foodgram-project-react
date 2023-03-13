@@ -1,6 +1,7 @@
 from colorfield.fields import ColorField
 from django.core.validators import MinValueValidator
 from django.db import models
+
 from users.models import User
 
 
@@ -84,6 +85,12 @@ class RecipeIngredient(models.Model):
     class Meta:
         verbose_name = 'Кол-во ингридиентов в рецепте'
         verbose_name_plural = 'Кол-во ингридиентов в рецепте'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['recipe', 'ingredient'],
+                name='unique_ingredient'
+            )
+        ]
 
     def __str__(self):
         return (f'Рецепт {self.recipe.name} | {self.ingredient.name} -'

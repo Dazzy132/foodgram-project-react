@@ -1,18 +1,13 @@
 import base64
 
-from app.models import (
-    FavoriteRecipe,
-    Ingredient,
-    Recipe,
-    RecipeIngredient,
-    ShoppingCart,
-    Tag,
-)
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
+
+from app.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
+                        ShoppingCart, Tag)
 from users.models import Follow, User
 
 
@@ -147,6 +142,39 @@ class RecipeSerializer(serializers.ModelSerializer):
         many=True, source='recipe_ingredient'
     )
 
+    def validate(self, data):
+        ingredients = self.initial_data['ingredients']
+
+        if not ingredients:
+            raise serializers.ValidationError(
+                'Минимально должен быть 1 ингредиент.'
+            )
+
+        ingredient_list = []
+        for item in ingredients:
+            # Проверка на то, что поля отсутствуют в POST/PATCH запросах
+            if not item.get('id') or not item.get('amount'):
+                raise serializers.ValidationError(
+                    'Обязательно нужно указать id ингредиента и его количество'
+                )
+
+            # Проверка на случай если поступают некорректный id ингредиента
+            ingredient = get_object_or_404(Ingredient, id=item['id'])
+
+            if ingredient in ingredient_list:
+                raise serializers.ValidationError(
+                    'Ингредиент не должен повторяться.'
+                )
+
+            if int(item['amount']) < 1:
+                raise serializers.ValidationError(
+                    'Минимальное количество - 1'
+                )
+
+            ingredient_list.append(ingredient)
+
+        return data
+
     @transaction.atomic()
     def update(self, instance, validated_data):
         instance.ingredients.clear()
@@ -247,6 +275,7 @@ class FollowSerializer(serializers.ModelSerializer):
 
 class FollowCheckSubscribeSerializer(serializers.ModelSerializer):
     """Сериализатор для проверки подписки"""
+
     class Meta:
         model = Follow
         fields = ('follower', 'following')
