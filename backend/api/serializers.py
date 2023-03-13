@@ -166,11 +166,6 @@ class RecipeSerializer(serializers.ModelSerializer):
                     'Ингредиент не должен повторяться.'
                 )
 
-            if int(item['amount']) < 1:
-                raise serializers.ValidationError(
-                    'Минимальное количество - 1'
-                )
-
             ingredient_list.append(ingredient)
 
         return data
