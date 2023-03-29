@@ -9,7 +9,10 @@ services:
       - ./.env
 
   backend:
-    image: dazzy132/foodgram_backend:latest
+#    image: dazzy132/foodgram_backend:latest
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
     volumes:
       - static_value:/app/static/
       - media_value:/app/media/
@@ -19,7 +22,10 @@ services:
       - ./.env
 
   frontend:
-    image: dazzy132/foodgram_frontend:latest
+#    image: dazzy132/foodgram_frontend:latest
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
     volumes:
       - ../frontend/:/app/result_build/
     depends_on:
@@ -31,7 +37,8 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/nginx.conf
+#      - ./nginx/nginx.conf:/etc/nginx/conf.d/nginx.conf
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - ../frontend/build:/usr/share/nginx/html/
       - ../docs/:/usr/share/nginx/html/api/docs/
       - static_value:/var/html/static/

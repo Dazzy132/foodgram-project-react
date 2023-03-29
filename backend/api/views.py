@@ -12,16 +12,15 @@ from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from app.models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
-                        ShoppingCart, Tag)
+from app.models import FavoriteRecipe, Ingredient, Recipe, ShoppingCart, Tag
 from users.models import Follow, User
 
 from .permissions import IsAdminAuthorOrReadOnly, IsAdminOrReadOnly
 from .serializers import (CustomUserSerializer, FavoriteRecipeSerializer,
                           FollowCheckSubscribeSerializer, FollowSerializer,
                           IngredientsSerializer, RecipeGETSerializer,
-                          RecipeIngredientSerializer, RecipeSerializer,
-                          ShoppingCartSerializer, TagSerializer)
+                          RecipeSerializer, ShoppingCartSerializer,
+                          TagSerializer)
 from .utils import (CustomPageNumberPagination, IngredientsFilter,
                     RecipeFilter, get_pdf_shopping_cart)
 
@@ -67,6 +66,7 @@ class RecipesView(viewsets.ModelViewSet):
         url_path=r'(?P<recipe_id>\d+)/favorite'
     )
     def favorite(self, request, recipe_id):
+        """Эндпоинт для добавления в избранные рецепты"""
         recipe = get_object_or_404(Recipe, pk=recipe_id)
         serializer = FavoriteRecipeSerializer(
             data={"recipe": recipe.pk}, context={"request": self.request}
@@ -80,6 +80,7 @@ class RecipesView(viewsets.ModelViewSet):
 
     @favorite.mapping.delete
     def delete_favorite(self, request, recipe_id):
+        """Эндпоинт для удаления из избранных рецептов"""
         recipe = get_object_or_404(Recipe, pk=recipe_id)
         favorite_recipe = recipe.favorites.filter(user=self.request.user)
         if favorite_recipe.exists():
@@ -104,8 +105,8 @@ class RecipesView(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def shopping_cart(self, request, recipe_id):
+        """Эндпоинт для добавления рецептов в корзину"""
         recipe = get_object_or_404(Recipe, pk=recipe_id)
-
         serializer = ShoppingCartSerializer(
             data={'user': self.request.user.pk, 'recipe': recipe.pk},
             context={'request': self.request}
@@ -119,6 +120,7 @@ class RecipesView(viewsets.ModelViewSet):
 
     @shopping_cart.mapping.delete
     def delete_shopping_cart(self, request, recipe_id):
+        """Эндпоинт для удаления рецептов из корзины"""
         recipe = get_object_or_404(Recipe, pk=recipe_id)
         del_recipe = recipe.cart.filter(user=self.request.user)
         if del_recipe.exists():
@@ -202,11 +204,7 @@ class UserSubscribeViewSet(APIView):
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
+    """Представление для Тегов"""
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
-
-
-class RecipeIngredientViewSet(viewsets.ModelViewSet):
-    queryset = RecipeIngredient.objects.all()
-    serializer_class = RecipeIngredientSerializer
